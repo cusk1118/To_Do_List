@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Todo List</title>
+    <style>
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .todo-text {
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        async function loadTodos() {
+            const response = await fetch('/todos');
+            const todos = await response.json();
+
+            const ul = document.getElementById('todos');
+            ul.innerHTML = ''; // Clear the list
+            for (const todo of todos) {
+                const li = document.createElement('li');
+                li.className = 'todo-item';
+
+                const span = document.createElement('span');
+                span.textContent = todo.text;
+                span.className = 'todo-text';
+                span.onclick = function() { editTodo(todo.id, span); };
+                li.append(span);
+
+                const button = document.createElement('button');
+                button.textContent = 'Delete';
+                button.onclick = function() { deleteTodo(todo.id); };
+                li.append(button);
+
+                ul.append(li);
+            }
+        }
+
+        async function createTodo() {
+            const input = document.getElementById('todo-input');
+            const text = input.value;
+            input.value = ''; // Clear the input
+
+            const response = await fetch('/todos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text }),
+            });
+            const todo = await response.json();
+
+            loadTodos(); // Reload the list
+        }
+
+        async function editTodo(id, span) {
+            const originalText = span.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = originalText;
+            span.textContent = '';
+            span.append(input);
+            input.focus();
+
+            input.onblur = async function() {
+                const newText = input.value;
+                const response = await fetch(`/todos/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: newText, done: false }),
+                });
+                const updatedTodo = await response.json();
+                span.textContent = updatedTodo.text;
+            };
+        }
+
+        async function deleteTodo(id) {
+            const response = await fetch(`/todos/${id}`, {
+                method: 'DELETE',
+            });
+            const result = await response.json();
+
+            loadTodos(); // Reload the list
+        }
+
+        window.onload = loadTodos; // Load todos when the page loads
+    </script>
+</head>
+<body>
+    <h1>To-Do List</h1>
+    <input type="text" id="todo-input">
+    <button onclick="createTodo()">Add todo</button>
+    <ul id="todos"></ul>
+</body>
+</html>
